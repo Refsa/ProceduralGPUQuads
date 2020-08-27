@@ -10,6 +10,6 @@ Pretty much how GPU Particles are done, but they can be much more versatile.
 Probably not very useful as it stands, more of a benchmark to see how hard it is possible to push the GPU.
 
 **Important:**  
-should work on all render pipelines (Built-In, URP and HDRP)
+should work on all render pipelines (Built-In, URP and HDRP)  
 width and height needs to be set before entering playmode.  
 There is no culling or depth sorting, everything is drawn in the order they are in the buffer  

@@ -1,0 +1,68 @@
+﻿#pragma kernel Setup
+#pragma kernel Runtime
+
+struct RenderData
+{
+    float3 Position;
+    float4 Color;
+};
+
+// From: https://thebookofshaders.com/11/
+float random (in float2 st) {
+    return frac(sin(dot(st.xy,
+                         float2(12.9898,78.233)))
+                 * 43758.5453123);
+}
+
+// From: https://thebookofshaders.com/11/
+float noise (in float2 st) {
+    float2 i = floor(st);
+    float2 f = frac(st);
+
+    // Four corners in 2D of a tile
+    float a = random(i);
+    float b = random(i + float2(1.0, 0.0));
+    float c = random(i + float2(0.0, 1.0));
+    float d = random(i + float2(1.0, 1.0));
+
+    // Smooth Interpolation
+
+    // Cubic Hermine Curve.  Same as SmoothStep()
+    float2 u = f*f*(3.0-2.0*f);
+    // u = smoothstep(0.,1.,f);
+
+    // Mix 4 coorners percentages
+    return lerp(a, b, u.x) +
+            (c - a)* u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
+
+RWStructuredBuffer<RenderData> _RenderData;
+float _Time;
+int _Size;
+float _NoiseScale;
+float _TimeScale;
+float2 _NoiseOffset;
+float2 _NoiseDirection;
+
+[numthreads(1,1,1)]
+void Setup (uint3 id : SV_DispatchThreadID)
+{
+    RenderData rd;
+
+    rd.Position = float3(id.x, 0, id.y);
+    rd.Color = float4(0, 0, 0, 1);
+
+    // _RenderData.Append(rd);
+    _RenderData[id.x * _Size + id.y] = rd;
+}
+
+
+[numthreads(32,32,1)]
+void Runtime (uint3 id : SV_DispatchThreadID)
+{
+    float n = noise((id.xy + _NoiseOffset + float2(_Time, _Time) * _NoiseDirection * _TimeScale) * _NoiseScale);
+
+    _RenderData[id.x * _Size + id.y].Color = float4(n, n, n, 1);
+    _RenderData[id.x * _Size + id.y].Position.y = n * 5;
+}

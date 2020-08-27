@@ -133,21 +133,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: ProceduralQuads
       objectReference: {fileID: 0}
-    - target: {fileID: 2898151247294348235, guid: fe826a9fb8d333b489ae2dd0a66d52aa,
-        type: 3}
-      propertyPath: width
-      value: 4096
-      objectReference: {fileID: 0}
-    - target: {fileID: 2898151247294348235, guid: fe826a9fb8d333b489ae2dd0a66d52aa,
-        type: 3}
-      propertyPath: height
-      value: 4096
-      objectReference: {fileID: 0}
-    - target: {fileID: 2898151247294348235, guid: fe826a9fb8d333b489ae2dd0a66d52aa,
-        type: 3}
-      propertyPath: drawInSceneView
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 2898151247294348244, guid: fe826a9fb8d333b489ae2dd0a66d52aa,
         type: 3}
       propertyPath: m_LocalPosition.x

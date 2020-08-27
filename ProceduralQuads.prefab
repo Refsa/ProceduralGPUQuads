@@ -43,12 +43,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8dca38f359c84294898d9537bb301065, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  material: {fileID: 2100000, guid: 833bf7c0fc8856c4d8e29b7562afa62b, type: 2}
   computeShader: {fileID: 7200000, guid: ce95c48a659aeb943a24967cf4db2554, type: 3}
-  width: 256
-  height: 256
+  width: 512
+  height: 512
   drawInGameView: 1
-  drawInSceneView: 1
+  drawInSceneView: 0
   noiseScale: 0.1
   timeScale: 20
   noiseOffset: {x: 0, y: 0}

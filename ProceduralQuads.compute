@@ -4,7 +4,7 @@
 struct RenderData
 {
     float3 Position;
-    float4 Color;
+    float Color;
 };
 
 // From: https://thebookofshaders.com/11/
@@ -38,6 +38,7 @@ float noise (in float2 st) {
 }
 
 RWStructuredBuffer<RenderData> _RenderData;
+float3 _PositionOffset;
 float _Time;
 int _Size;
 float _NoiseScale;
@@ -50,10 +51,9 @@ void Setup (uint3 id : SV_DispatchThreadID)
 {
     RenderData rd;
 
-    rd.Position = float3(id.x, 0, id.y);
-    rd.Color = float4(0, 0, 0, 1);
+    rd.Position = float3(id.x, 0, id.y) - _PositionOffset;
+    rd.Color = 0;
 
-    // _RenderData.Append(rd);
     _RenderData[id.x * _Size + id.y] = rd;
 }
 
@@ -61,8 +61,11 @@ void Setup (uint3 id : SV_DispatchThreadID)
 [numthreads(32,32,1)]
 void Runtime (uint3 id : SV_DispatchThreadID)
 {
-    float n = noise((id.xy + _NoiseOffset + float2(_Time, _Time) * _NoiseDirection * _TimeScale) * _NoiseScale);
+    const float2 time = float2(_Time, _Time);
+    const float2 noiseOffset = _NoiseOffset + time * _NoiseDirection * _TimeScale;
 
-    _RenderData[id.x * _Size + id.y].Color = float4(n, n, n, 1);
+    float n = noise((id.xy + noiseOffset) * _NoiseScale);
+
+    _RenderData[id.x * _Size + id.y].Color = n;
     _RenderData[id.x * _Size + id.y].Position.y = n * 5;
 }

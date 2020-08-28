@@ -1,16 +1,13 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Rendering;
 
-public class ProceduralQuads : MonoBehaviour
+public class DMIIQuads : MonoBehaviour
 {
     [SerializeField, HideInInspector] ComputeShader computeShader;
     [SerializeField] int width = 256;
     [SerializeField] int height = 256;
-    [SerializeField] bool drawInGameView = true;
-#if UNITY_EDITOR
-    [SerializeField] bool drawInSceneView = true;
-#endif
 
     [Header("Can edit at Runtime")]
     [SerializeField] float noiseScale = 0.1f;
@@ -18,38 +15,35 @@ public class ProceduralQuads : MonoBehaviour
     [SerializeField] Vector2 noiseOffset = Vector2.zero;
     [SerializeField] Vector2 noiseDirecton = Vector2.one;
 
+    Mesh quadMesh;
     Material material;
     ComputeBuffer renderData;
     ComputeBuffer args;
     uint[] tempArgs;
     Bounds bounds;
-
+    
     Queue<float> avgFPS = new Queue<float>();
-
-    static float AllocatedVRAM;
 
     void Start()
     {
-        material = new Material(Shader.Find("ProceduralQuads"));
+        quadMesh = Quad(Vector2.one);
+        material = new Material(Shader.Find("DMIIShader"));
         material.enableInstancing = true;
 
-        // This is the bounds you need to be inside to see the rendering
         bounds = new Bounds(new Vector3(width, 0f, height) / 2f, new Vector3(width, 100f, height));
 
-        // sizeof(float) * 7 is the size of the RenderData struct in the compute/shader
+        // Initialize GPU buffers
         int bufferSizeBytes = sizeof(float) * 4;
         renderData = new ComputeBuffer(width * height, bufferSizeBytes);
 
-        // Tells the render pipeline about how many verts and instances to draw
-        tempArgs = new uint[5] { (uint)(width * height), 1, 0, 0, 0 };
+        tempArgs = new uint[5] { quadMesh.GetIndexCount(0), (uint)(width * height), 0, 0, 0 };
         args = new ComputeBuffer(5, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
         args.SetData(tempArgs);
 
         // Set GPU memory
         material.SetBuffer("_RenderData", renderData);
 
-        // Initialize GPU memory
-        computeShader.SetVector("_PositionOffset", Vector3.zero);
+        computeShader.SetVector("_PositionOffset", new Vector3(width / 2f, 0f, height / 2f));
         computeShader.SetInt("_Size", width);
         computeShader.SetBuffer(0, "_RenderData", renderData);
         computeShader.SetBuffer(1, "_RenderData", renderData);
@@ -57,8 +51,6 @@ public class ProceduralQuads : MonoBehaviour
 
         Application.targetFrameRate = 240;
         QualitySettings.vSyncCount = 0;
-
-        AllocatedVRAM = bufferSizeBytes * width * height / 1000f / 1000f;
     }
 
     void OnDestroy()
@@ -66,8 +58,9 @@ public class ProceduralQuads : MonoBehaviour
         args.Dispose();
         renderData.Dispose();
     }
-    void Update()
-    {
+
+    void Update() 
+    { 
         // Alter GPU memory with compute shader
         computeShader.SetFloat("_NoiseScale", noiseScale);
         computeShader.SetFloat("_TimeScale", timeScale);
@@ -76,29 +69,52 @@ public class ProceduralQuads : MonoBehaviour
         computeShader.SetFloat("_Time", Time.time);
         computeShader.Dispatch(1, width / 32, height / 32, 1);
 
-        // Draw directly with data on GPU aka lockless rendering
-        if (drawInGameView)
-        {
-            Graphics.DrawProceduralIndirect(
-                material, bounds, MeshTopology.Points, args, 0, Camera.main
-            );
-        }
-#if UNITY_EDITOR
-        if (drawInSceneView)
-        {
-            Graphics.DrawProceduralIndirect(
-                material, bounds, MeshTopology.Points, args, 0, UnityEditor.SceneView.lastActiveSceneView.camera
-            );
-        }
-#endif
+        Graphics.DrawMeshInstancedIndirect(quadMesh, 0, material, bounds, args, 0, null, ShadowCastingMode.Off, false, 0, Camera.main);
 
         avgFPS.Enqueue(1f / Time.deltaTime);
         if (avgFPS.Count > 60) avgFPS.Dequeue();
     }
 
+    public static Mesh Quad(Vector2 size)
+    {
+        Vector3 halfSize = size / 2f;
+
+        Vector3 c1 = new Vector3(-halfSize.x, 0f, -halfSize.y);
+        Vector3 c2 = new Vector3(halfSize.x, 0f, -halfSize.y);
+        Vector3 c3 = new Vector3(halfSize.x, 0f, halfSize.y);
+        Vector3 c4 = new Vector3(-halfSize.x, 0f, halfSize.y);
+
+        Vector3[] vertices =
+            new[]
+            {
+                    c1, c2, c3, c4
+            };
+
+        int[] indices =
+            new[] {
+                    0, 1, 2, 0, 2, 3
+            };
+
+        return CreateMesh(vertices, indices);
+    }
+
+    static Mesh CreateMesh(Vector3[] vertices, int[] indices)
+    {
+        var mesh = new Mesh();
+
+        mesh.SetVertices(vertices);
+        mesh.SetIndices(indices, MeshTopology.Triangles, 0);
+
+        mesh.RecalculateBounds();
+        mesh.RecalculateNormals();
+        mesh.Optimize();
+
+        return mesh;
+    }
+
     void OnGUI() 
     {
         Rect rect = new Rect(Vector2.zero, new Vector2(150, 50));
-        GUI.Label(rect, $"FPS: {avgFPS.Average():F2} FPS\nVRAM: {AllocatedVRAM:F2} MB", GUI.skin.box);
+        GUI.Label(rect, $"FPS: {avgFPS.Average():F2}", GUI.skin.box);
     }
 }

@@ -1,7 +1,5 @@
 Shader "ProceduralQuads" {
-	Properties {
-        
-	}
+	Properties { }
 	SubShader {
 		Tags {
             "RenderType" = "Transparent"
@@ -9,9 +7,9 @@ Shader "ProceduralQuads" {
             "Queue" = "Transparent"
         }
         Cull Off
-        Lighting Off
         ZWrite Off
-        Blend SrcAlpha OneMinusSrcAlpha
+        // Lighting Off
+        // Blend SrcAlpha OneMinusSrcAlpha
 
 		Pass {
 			CGPROGRAM
@@ -27,23 +25,20 @@ Shader "ProceduralQuads" {
             };
 			struct g2f {
 				float4 pos: SV_POSITION;
-                uint vertexID: TEXCOORD3;
+                uint vertexID: TEXCOORD0;
 			};
-
-            struct RenderData
-            {
+            struct RenderData {
                 float3 Position;
-                float4 Color;
+                float Color;
             };
 
 			StructuredBuffer<RenderData> _RenderData;
 
-			v2g vert(appdata_full v, uint vertexID: SV_VertexID) 
+			v2g vert(uint vertexID: SV_VertexID) 
             {
-				v2g f;
-                
                 RenderData prop = _RenderData[vertexID];
 
+				v2g f;
                 f.vertexID = vertexID;
                 f.pos = float4(prop.Position, 1.0);
 
@@ -53,27 +48,29 @@ Shader "ProceduralQuads" {
             [maxvertexcount(6)]
             void geom(point v2g input[1], inout TriangleStream<g2f> triangleStream)
             {
-                RenderData prop = _RenderData[input[0].vertexID];
+                const float4 offset0 = float4(-0.5, 0, -0.5, 0);
+                const float4 offset1 = float4(-0.5, 0, 0.5, 0);
+                const float4 offset2 = float4(0.5, 0, 0.5, 0);
+                const float4 offset3 = float4(0.5, 0, -0.5, 0);
 
                 float4 center = input[0].pos;
+                uint vid = input[0].vertexID;
 
-                float4 c1 = center + float4(-0.5, 0, -0.5, 0);
-                float4 c2 = center + float4(-0.5, 0, 0.5, 0);
-                float4 c3 = center + float4(0.5, 0, 0.5, 0);
-                float4 c4 = center + float4(0.5, 0, -0.5, 0);
+                g2f vd1;
+                vd1.pos = UnityObjectToClipPos(center + offset0);
+                vd1.vertexID = vid;
 
-                g2f vd1 = (g2f)0;
-                vd1.pos = UnityObjectToClipPos(c1);
-                vd1.vertexID = input[0].vertexID;
-                g2f vd2 = (g2f)0;
-                vd2.pos = UnityObjectToClipPos(c2);
-                vd2.vertexID = input[0].vertexID;
-                g2f vd3 = (g2f)0;
-                vd3.pos = UnityObjectToClipPos(c3);
-                vd3.vertexID = input[0].vertexID;
-                g2f vd4 = (g2f)0;
-                vd4.pos = UnityObjectToClipPos(c4);
-                vd4.vertexID = input[0].vertexID;
+                g2f vd2;
+                vd2.pos = UnityObjectToClipPos(center + offset1);
+                vd2.vertexID = vid;
+
+                g2f vd3;
+                vd3.pos = UnityObjectToClipPos(center + offset2);
+                vd3.vertexID = vid;
+                
+                g2f vd4;
+                vd4.pos = UnityObjectToClipPos(center + offset3);
+                vd4.vertexID = vid;
 
                 triangleStream.Append(vd1);
                 triangleStream.Append(vd2);
@@ -83,15 +80,13 @@ Shader "ProceduralQuads" {
                 triangleStream.Append(vd3);
                 triangleStream.Append(vd4);
 
-                triangleStream.RestartStrip();
+                triangleStream.RestartStrip(); 
             }
 
-			float4 frag(g2f f) : SV_Target{
-                RenderData prop = _RenderData[f.vertexID];
+			fixed4 frag(g2f f) : SV_Target{
+                float c = _RenderData[f.vertexID].Color;
 
-                float4 c = prop.Color;
-
-				return c;
+				return fixed4(c, c, c, 1.0);
 			}
 			ENDCG
 		}
